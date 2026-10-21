@@ -3,6 +3,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .core import ConversationStore, ProviderError, chat
 from .providers import PROVIDERS, generate
+from .tools_registry import available_tools, run_tool
 
 class Handler(BaseHTTPRequestHandler):
     store = None
@@ -18,6 +19,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path == "/tools":
+            return self.send_json(200, {"tools": available_tools()})
         if self.path == "/providers":
             return self.send_json(200, {"providers": [{"id": p, "default_model": m} for p, (_, m) in PROVIDERS.items()] + [{"id": "gemini", "default_model": "gemini-2.5-flash"}]})
         if self.path == "/health":
@@ -25,7 +28,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "not_found"})
 
     def do_POST(self):
-        if self.path != "/chat":
+        if self.path not in ("/chat", "/tools/run"):
             return self.send_json(404, {"error": "not_found"})
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -38,6 +41,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(400, {"error": "invalid_request"})
             if self.headers.get("Origin"):
                 return self.send_json(403, {"error": "cross_origin_forbidden"})
+            if self.path == "/tools/run":
+                return self.send_json(200, run_tool(payload.get("tool"), payload.get("arguments")))
             provider_name = payload.get("provider", "gemini")
             if not isinstance(provider_name, str):
                 return self.send_json(400, {"error": "invalid_provider"})
