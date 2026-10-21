@@ -79,6 +79,24 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(payload["reply"], "नमस्कार!")
 
+    def test_cross_origin_chat_is_forbidden(self):
+        req = urllib.request.Request(
+            self.base + "/chat",
+            data=json.dumps({"session_id": "origin", "message": "hello"}).encode(),
+            headers={"Content-Type": "application/json", "Origin": "https://evil.example"},
+        )
+        with self.assertRaises(urllib.error.HTTPError) as result:
+            urllib.request.urlopen(req, timeout=3)
+        self.assertEqual(result.exception.code, 403)
+
+    def test_request_errors_do_not_echo_user_input(self):
+        code, payload = self.request("/chat", json.dumps({
+            "session_id": "invalid session containing sensitive text",
+            "message": "hello",
+        }).encode())
+        self.assertEqual(code, 400)
+        self.assertNotIn("sensitive", json.dumps(payload))
+
     def test_missing_api_key_returns_visible_error(self):
         with patch.dict("os.environ", {"GEMINI_API_KEY": ""}):
             code, payload = self.request("/chat", json.dumps({"session_id": "http-test", "message": "hello"}).encode())
