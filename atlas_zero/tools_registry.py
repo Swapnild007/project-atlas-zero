@@ -11,6 +11,11 @@ MAX_RESPONSE_BYTES = 128 * 1024
 USER_AGENT = "AtlasZero/0.1 (public-data research client; https://github.com/Swapnild007/project-atlas-zero)"
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def available_tools():
     return [{"id": "wikipedia_search", "description": "Search Wikipedia articles",
              "languages": sorted(LANGUAGES), "requires_key": False}]
@@ -32,7 +37,7 @@ def wikipedia_search(query, language="en", limit=5, transport=None):
     )
     try:
         if transport is None:
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.build_opener(NoRedirect).open(req, timeout=10) as response:
                 raw = response.read(MAX_RESPONSE_BYTES + 1)
                 if len(raw) > MAX_RESPONSE_BYTES:
                     raise ProviderError("tool_response_too_large")
