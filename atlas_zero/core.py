@@ -57,9 +57,11 @@ class ConversationStore:
             rows = db.execute("SELECT role, content FROM (SELECT id, role, content FROM messages WHERE session_id=? ORDER BY id DESC LIMIT ?) ORDER BY id", (session_id, limit)).fetchall()
         return [{"role": r, "content": c} for r, c in rows]
 
-    def append(self, session_id, role, content):
+    def append_turn(self, session_id, user_message, assistant_message):
+        # A conversation turn must be persisted atomically.
         with self.connect() as db:
-            db.execute("INSERT INTO messages(session_id, role, content) VALUES(?,?,?)", (session_id, role, content))
+            db.execute("INSERT INTO messages(session_id, role, content) VALUES(?,?,?)", (session_id, "user", user_message))
+            db.execute("INSERT INTO messages(session_id, role, content) VALUES(?,?,?)", (session_id, "assistant", assistant_message))
 
 def chat(store, session_id, message, provider=gemini_reply):
     if not isinstance(session_id, str) or not 1 <= len(session_id) <= 100 or not session_id.replace("-", "").replace("_", "").isalnum():
@@ -68,6 +70,7 @@ def chat(store, session_id, message, provider=gemini_reply):
         raise ValueError("invalid_message")
     history = store.history(session_id)
     answer = provider(history + [{"role": "user", "content": message}])
-    store.append(session_id, "user", message)
-    store.append(session_id, "assistant", answer)
+    if not isinstance(answer, str) or not answer.strip():
+        raise ProviderError("empty_provider_response")
+    store.append_turn(session_id, message, answer)
     return {"session_id": session_id, "reply": answer}
