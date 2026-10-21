@@ -38,6 +38,14 @@ Run tests:
 python -m unittest discover -s tests -v
 ```
 
+Optional live-provider smoke check (requires your own configured API key):
+
+```bash
+python -m scripts.live_smoke
+```
+
+This check sends a real request to Gemini. It is not part of the offline unit-test suite.
+
 ## Important limitations
 
 - The HTTP server binds to localhost and has no user authentication.
