@@ -69,6 +69,16 @@ class HTTPTests(unittest.TestCase):
             urllib.request.urlopen(req, timeout=3)
         self.assertEqual(result.exception.code, 415)
 
+    def test_successful_chat_response(self):
+        with patch("atlas_zero.server.chat", side_effect=lambda store, session_id, message: {
+            "session_id": session_id, "reply": "नमस्कार!"
+        }):
+            code, payload = self.request("/chat", json.dumps({
+                "session_id": "successful-http", "message": "नमस्कार"
+            }).encode())
+        self.assertEqual(code, 200)
+        self.assertEqual(payload["reply"], "नमस्कार!")
+
     def test_missing_api_key_returns_visible_error(self):
         with patch.dict("os.environ", {"GEMINI_API_KEY": ""}):
             code, payload = self.request("/chat", json.dumps({"session_id": "http-test", "message": "hello"}).encode())
