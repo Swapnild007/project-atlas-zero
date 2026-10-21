@@ -1,12 +1,20 @@
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import hmac
 from .core import ConversationStore, ProviderError, chat
 from .providers import PROVIDERS, generate
 from .tools_registry import available_tools, run_tool
 
 class Handler(BaseHTTPRequestHandler):
     store = None
+    access_token = None
+
+    def authorized(self):
+        if not self.access_token:
+            return True  # Development only: server binds to loopback.
+        supplied = self.headers.get('Authorization', '')
+        return hmac.compare_digest(supplied, 'Bearer ' + self.access_token)
 
     def send_json(self, status, data):
         body = json.dumps(data, ensure_ascii=False).encode()
@@ -19,6 +27,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path != "/health" and not self.authorized():
+            return self.send_json(401, {"error": "unauthorized"})
         if self.path == "/tools":
             return self.send_json(200, {"tools": available_tools()})
         if self.path == "/providers":
@@ -28,6 +38,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "not_found"})
 
     def do_POST(self):
+        if not self.authorized():
+            return self.send_json(401, {"error": "unauthorized"})
         if self.path not in ("/chat", "/tools/run"):
             return self.send_json(404, {"error": "not_found"})
         try:
@@ -67,6 +79,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     Handler.store = ConversationStore()
+    Handler.access_token = os.getenv("ATLAS_ACCESS_TOKEN") or None
     port = int(os.getenv("PORT", "8080"))
     print(f"Atlas Zero listening on localhost:{port}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
