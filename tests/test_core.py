@@ -28,6 +28,20 @@ class CoreTests(unittest.TestCase):
             chat(self.store, "demo", "hello", failing)
         self.assertEqual(self.store.history("demo"), [])
 
+    def test_empty_reply_is_not_persisted(self):
+        with self.assertRaisesRegex(ProviderError, "empty_provider_response"):
+            chat(self.store, "demo", "hello", lambda _: "")
+        self.assertEqual(self.store.history("demo"), [])
+
+    def test_atomic_turn_rolls_back_on_second_insert_failure(self):
+        with self.store.connect() as db:
+            db.execute("""CREATE TRIGGER reject_assistant BEFORE INSERT ON messages
+                          WHEN NEW.role='assistant'
+                          BEGIN SELECT RAISE(ABORT, 'simulated failure'); END""")
+        with self.assertRaises(Exception):
+            chat(self.store, "demo", "hello", lambda _: "world")
+        self.assertEqual(self.store.history("demo"), [])
+
     def test_missing_key(self):
         with self.assertRaisesRegex(ProviderError, "provider_not_configured"):
             gemini_reply([{"role": "user", "content": "hello"}], api_key="")
