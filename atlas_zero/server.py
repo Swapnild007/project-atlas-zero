@@ -2,6 +2,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from .core import ConversationStore, ProviderError, chat
+from .providers import PROVIDERS, generate
 
 class Handler(BaseHTTPRequestHandler):
     store = None
@@ -15,6 +16,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path == "/providers":
+            return self.send_json(200, {"providers": [{"id": p, "default_model": m} for p, (_, m) in PROVIDERS.items()] + [{"id": "gemini", "default_model": "gemini-2.5-flash"}]})
         if self.path == "/health":
             return self.send_json(200, {"status": "ok", "service": "atlas-zero"})
         self.send_json(404, {"error": "not_found"})
@@ -31,7 +34,18 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 return self.send_json(400, {"error": "invalid_request"})
-            result = chat(self.store, payload.get("session_id"), payload.get("message"))
+            provider_name = payload.get("provider", "gemini")
+            if provider_name == "gemini":
+                if "api_key" in payload:
+                    from .core import gemini_reply
+                    result = chat(self.store, payload.get("session_id"), payload.get("message"),
+                                  provider=lambda messages: gemini_reply(messages, api_key=payload["api_key"], model=payload.get("model")))
+                else:
+                    result = chat(self.store, payload.get("session_id"), payload.get("message"))
+            else:
+                result = chat(self.store, payload.get("session_id"), payload.get("message"),
+                              provider=lambda messages: generate(messages, provider_name,
+                                                               model=payload.get("model"), api_key=payload.get("api_key")))
             self.send_json(200, result)
         except (ValueError, AttributeError, TypeError, json.JSONDecodeError) as exc:
             self.send_json(400, {"error": "invalid_request", "detail": str(exc)})
