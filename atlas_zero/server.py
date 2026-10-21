@@ -11,6 +11,8 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -34,7 +36,11 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 return self.send_json(400, {"error": "invalid_request"})
+            if self.headers.get("Origin"):
+                return self.send_json(403, {"error": "cross_origin_forbidden"})
             provider_name = payload.get("provider", "gemini")
+            if not isinstance(provider_name, str):
+                return self.send_json(400, {"error": "invalid_provider"})
             if provider_name == "gemini":
                 if "api_key" in payload:
                     from .core import gemini_reply
@@ -47,8 +53,8 @@ class Handler(BaseHTTPRequestHandler):
                               provider=lambda messages: generate(messages, provider_name,
                                                                model=payload.get("model"), api_key=payload.get("api_key")))
             self.send_json(200, result)
-        except (ValueError, AttributeError, TypeError, json.JSONDecodeError) as exc:
-            self.send_json(400, {"error": "invalid_request", "detail": str(exc)})
+        except (ValueError, AttributeError, TypeError, json.JSONDecodeError):
+            self.send_json(400, {"error": "invalid_request"})
         except ProviderError as exc:
             self.send_json(503, {"error": str(exc)})
         except Exception:
