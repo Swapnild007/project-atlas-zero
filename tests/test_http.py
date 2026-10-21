@@ -70,7 +70,7 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(result.exception.code, 415)
 
     def test_successful_chat_response(self):
-        with patch("atlas_zero.server.chat", side_effect=lambda store, session_id, message: {
+        with patch("atlas_zero.server.chat", side_effect=lambda store, session_id, message, **kwargs: {
             "session_id": session_id, "reply": "नमस्कार!"
         }):
             code, payload = self.request("/chat", json.dumps({
