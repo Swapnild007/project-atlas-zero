@@ -26,7 +26,11 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
             if not 0 < length <= 16000:
                 return self.send_json(413, {"error": "invalid_body_size"})
+            if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+                return self.send_json(415, {"error": "unsupported_media_type"})
             payload = json.loads(self.rfile.read(length))
+            if not isinstance(payload, dict):
+                return self.send_json(400, {"error": "invalid_request"})
             result = chat(self.store, payload.get("session_id"), payload.get("message"))
             self.send_json(200, result)
         except (ValueError, AttributeError, TypeError, json.JSONDecodeError) as exc:
