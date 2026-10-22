@@ -10,6 +10,14 @@ class Handler(BaseHTTPRequestHandler):
     store = None
     access_token = None
 
+    def valid_local_host(self):
+        host = self.headers.get("Host", "")
+        return host in (f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}")
+
+    def valid_origin(self):
+        origin = self.headers.get("Origin")
+        return not origin or origin in (f"http://127.0.0.1:{self.server.server_port}", f"http://localhost:{self.server.server_port}")
+
     def authorized(self):
         if not self.access_token:
             return True  # Development only: server binds to loopback.
@@ -27,6 +35,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if not self.valid_local_host():
+            return self.send_json(403, {"error": "invalid_host"})
         if self.path != "/health" and not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
         if self.path == "/tools":
@@ -38,6 +48,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(404, {"error": "not_found"})
 
     def do_POST(self):
+        if not self.valid_local_host():
+            return self.send_json(403, {"error": "invalid_host"})
         if not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
         if self.path not in ("/chat", "/tools/run"):
@@ -51,7 +63,7 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length))
             if not isinstance(payload, dict):
                 return self.send_json(400, {"error": "invalid_request"})
-            if self.headers.get("Origin"):
+            if not self.valid_origin():
                 return self.send_json(403, {"error": "cross_origin_forbidden"})
             if self.path == "/tools/run":
                 return self.send_json(200, run_tool(payload.get("tool"), payload.get("arguments")))
