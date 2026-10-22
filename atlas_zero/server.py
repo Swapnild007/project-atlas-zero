@@ -37,6 +37,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if not self.valid_local_host():
             return self.send_json(403, {"error": "invalid_host"})
+        if not self.valid_origin():
+            return self.send_json(403, {"error": "cross_origin_forbidden"})
         if self.path != "/health" and not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
         if self.path == "/tools":
@@ -50,6 +52,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.valid_local_host():
             return self.send_json(403, {"error": "invalid_host"})
+        if not self.valid_origin():
+            return self.send_json(403, {"error": "cross_origin_forbidden"})
         if not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
         if self.path not in ("/chat", "/tools/run"):
