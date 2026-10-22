@@ -2,6 +2,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import hmac
+from pathlib import Path
 from .core import ConversationStore, ProviderError, chat
 from .providers import PROVIDERS, generate
 from .tools_registry import available_tools, run_tool
@@ -39,8 +40,19 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(403, {"error": "invalid_host"})
         if not self.valid_origin():
             return self.send_json(403, {"error": "cross_origin_forbidden"})
-        if self.path != "/health" and not self.authorized():
+        if self.path not in ("/health", "/") and not self.authorized():
             return self.send_json(401, {"error": "unauthorized"})
+        if self.path == "/":
+            page = Path(__file__).with_name("index.html").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+            self.send_header("Content-Length", str(len(page)))
+            self.end_headers()
+            return self.wfile.write(page)
         if self.path == "/tools":
             return self.send_json(200, {"tools": available_tools()})
         if self.path == "/providers":
