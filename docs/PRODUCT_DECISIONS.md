@@ -3,7 +3,7 @@
 Status: active engineering plan, not a claim of completed features.
 
 ## Mission
-A general-purpose AI assistant that answers, researches, creates, analyzes, and takes explicitly authorized actions. SaaS and website creation are examples, not the sole product.
+A milestone-scale, extensible AI ecosystem combining multimodel intelligence, agents, research, RAG, public APIs, MCP, creation, coding, productivity, automation, voice, vision, multilingual interaction, privacy, and deployable applications. No single use case (including SaaS building or general chat) defines or limits the platform.
 
 ## Architecture decisions
 - Python standard-library backend for the current zero-cost prototype.
@@ -30,3 +30,6 @@ P3: files, documents, research, code tasks, MCP, and optional deployment integra
 
 ## Release rule
 No public deployment or claim of production readiness until security review, isolation, end-to-end checks, and live integration verification succeed.
+
+## Scope ownership rule
+All eight capability domains belong in the long-term product scope: intelligence, knowledge, creation, automation, productivity, interaction, memory, and platform. Prioritization determines build order, not whether a domain is included. Each feature must have an explicit status: proposed, implemented, tested, or released. No claims of complete universal capability without execution evidence.
