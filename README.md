@@ -1,65 +1,48 @@
 # Project Atlas Zero
 
-Early-stage experimental software. **Work in progress.**
+**Experimental milestone-scale AI ecosystem. Not production-ready.**
 
-This repository contains an initial Python backend for experimenting with AI-assisted conversations. The implementation is incomplete and is **not ready for production use**.
+Atlas Zero is intended to combine multimodel intelligence, research, creation, automation, files, coding, voice, memory, and connected tools. These are product goals, not claims that every capability is available.
 
-## Current contents
-
-- Local HTTP endpoints: `GET /health` and `POST /chat`
-- A Gemini API adapter requiring your own API key
-- SQLite conversation history
-- Automated unit and HTTP tests
-
-These components have been committed to the repository. Passing CI and live provider integration have not yet been independently verified.
+## Implemented components (pending full-suite verification)
+- Local Python HTTP server with a mobile-first web chat workspace at http://127.0.0.1:8080/
+- Functional chat Send and New Chat controls; model and provider selection; in-memory BYOK credentials
+- Gemini, OpenAI, Groq, OpenRouter, and Mistral adapters
+- Local SQLite conversation history
+- Curated Wikipedia search tool supporting English, Hindi, and Marathi
+- Local API endpoints: GET /health, /providers, /tools; POST /chat, /tools/run
+- Automated offline tests
 
 ## Run locally
-
 Requires Python 3.11+.
 
 ```bash
-export GEMINI_API_KEY="your-api-key"
 python -m atlas_zero.server
 ```
 
-In a second terminal:
+Open http://127.0.0.1:8080/ in the same computer's browser. In Settings choose a provider and enter your own API key. No API key is needed to display the interface. You may alternatively configure GEMINI_API_KEY in your local environment.
 
-```bash
-curl http://127.0.0.1:8080/health
+Optional local API protection: set ATLAS_ACCESS_TOKEN before starting the server and enter that same token in Settings.
 
-curl http://127.0.0.1:8080/chat \
-  -H 'Content-Type: application/json' \
-  -d '{"session_id":"demo","message":"Hello"}'
-```
-
-Run tests:
+Run offline tests:
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Optional live-provider smoke check (requires your own configured API key):
+Optional live Gemini check (requires a configured key):
 
 ```bash
 python -m scripts.live_smoke
 ```
 
-This check sends a real request to Gemini. It is not part of the offline unit-test suite.
+## Security and release limits
+- Binds only to loopback. Do not expose this server to the internet or route through a public proxy.
+- The optional shared access token is not user authentication or multi-tenant isolation.
+- Conversation content persists in unencrypted local SQLite. Do not enter sensitive information.
+- BYOK keys stay in browser-tab memory but are transmitted to the trusted local backend for provider requests.
+- No production authentication, secure multiuser tenancy, public deployment, autonomous coding execution, or universal tool support.
+- API quotas, costs, and availability depend on individual providers.
+- The latest commits have not been independently verified by a full local test run or live API smoke test.
 
-## Important limitations
-
-- The HTTP server binds to localhost and has no user authentication.
-- Conversation data is stored locally in SQLite without application-level encryption.
-- Model requests require a separately configured Gemini API key and are subject to provider limits.
-- No public deployment, agent tool execution, MCP, RAG, or production security controls are provided yet.
-- Do not enter sensitive personal information or expose this server to the public internet.
-
-## Development status
-
-Development is ongoing. Functionality and interfaces may change. Issues and test results will guide subsequent changes.
-
-## Project name
-
-"Project Atlas Zero" is a temporary development name, not a finalized public brand.
-
-This is an independent experimental project and has no claimed government affiliation or endorsement.
+The name Atlas Zero is provisional. This project is independent and has no claimed government endorsement.
